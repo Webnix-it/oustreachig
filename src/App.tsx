@@ -3,12 +3,99 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 // SHA-256 hash of "1706" - precomputed, PIN is never stored in plaintext
 const PIN_HASH = 'c08ee2a296e9cc80f185cf84596b17f6dc4e29df05c403f2b0fb077876289cb8';
 
+// Pure JS SHA-256 implementation (fallback for non-secure contexts)
+function sha256Pure(message: string): string {
+  function rightRotate(value: number, amount: number): number {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
+      h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+
+  const k = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ];
+
+  let bytes = new TextEncoder().encode(message);
+  const len = bytes.length;
+  let words: number[] = [];
+  for (let i = 0; i < len; i++) {
+    words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
+  }
+  const bitLen = len * 8;
+  words[len >> 2] |= 0x80 << (24 - (len % 4) * 8);
+  words[15] = bitLen % maxWord;
+  if (bitLen >= maxWord) {
+    words[14] = Math.floor(bitLen / maxWord);
+  }
+
+  for (let j = 0; j < words.length; j += 16) {
+    const w = words.slice(j, j + 16);
+    const _h0 = h0, _h1 = h1, _h2 = h2, _h3 = h3, _h4 = h4, _h5 = h5, _h6 = h6, _h7 = h7;
+
+    for (let i = 0; i < 64; i++) {
+      if (i >= 16) {
+        const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+
+      const S1 = rightRotate(h4, 6) ^ rightRotate(h4, 11) ^ rightRotate(h4, 25);
+      const ch = (h4 & h5) ^ (~h4 & h6);
+      const temp1 = (h7 + S1 + ch + k[i] + w[i]) | 0;
+      const S0 = rightRotate(h0, 2) ^ rightRotate(h0, 13) ^ rightRotate(h0, 22);
+      const maj = (h0 & h1) ^ (h0 & h2) ^ (h1 & h2);
+      const temp2 = (S0 + maj) | 0;
+
+      h7 = h6;
+      h6 = h5;
+      h5 = h4;
+      h4 = (h3 + temp1) | 0;
+      h3 = h2;
+      h2 = h1;
+      h1 = h0;
+      h0 = (temp1 + temp2) | 0;
+    }
+
+    h0 = (h0 + _h0) | 0;
+    h1 = (h1 + _h1) | 0;
+    h2 = (h2 + _h2) | 0;
+    h3 = (h3 + _h3) | 0;
+    h4 = (h4 + _h4) | 0;
+    h5 = (h5 + _h5) | 0;
+    h6 = (h6 + _h6) | 0;
+    h7 = (h7 + _h7) | 0;
+  }
+
+  return [h0, h1, h2, h3, h4, h5, h6, h7]
+    .map(v => (v >>> 0).toString(16).padStart(8, '0'))
+    .join('');
+}
+
 async function computeSHA256(text: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  // Try Web Crypto API first (works in HTTPS contexts)
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      // Fallback to pure JS implementation
+    }
+  }
+  // Fallback: pure JS SHA-256
+  return sha256Pure(text);
 }
 
 function LockScreen({ onUnlock }: { onUnlock: () => void }) {
@@ -18,18 +105,24 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    inputRefs.current[0]?.focus();
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+    // Only allow digits
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length > 1) return;
 
     const newDigits = [...digits];
-    newDigits[index] = value.slice(-1);
+    newDigits[index] = cleaned;
     setDigits(newDigits);
     setError(false);
 
-    if (value && index < 3) {
+    if (cleaned && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
 
@@ -190,7 +283,7 @@ function Dashboard() {
           </div>
           <h1 className="text-xl font-bold text-white">Ricerca Professionisti</h1>
         </div>
-        <p className="text-gray-400 text-sm ml-13">Trova professionisti nella tua città</p>
+        <p className="text-gray-400 text-sm ml-[52px]">Trova professionisti nella tua città</p>
       </header>
 
       {/* Search Form */}
@@ -282,8 +375,8 @@ function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-300 font-medium">Come funziona</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Inserisci la categoria professionale e la città, poi premi "Cerca" per inviare la richiesta. 
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                Inserisci la categoria professionale e la città, poi premi "Cerca" per inviare la richiesta.
                 Puoi anche consultare direttamente il foglio Google con tutti i risultati.
               </p>
             </div>
@@ -304,7 +397,11 @@ function Dashboard() {
 function App() {
   const [unlocked, setUnlocked] = useState(false);
 
-  return unlocked ? <Dashboard /> : <LockScreen onUnlock={() => setUnlocked(true)} />;
+  if (!unlocked) {
+    return <LockScreen onUnlock={() => setUnlocked(true)} />;
+  }
+
+  return <Dashboard />;
 }
 
 export default App;
