@@ -1,7 +1,4 @@
-@import "tailwindcss";
-
-/* ─── RESET & BASE ──────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
   width: 100%;
@@ -15,7 +12,7 @@ html, body, #root {
 input { font-size: 16px !important; }
 @media (min-width: 640px) { input { font-size: inherit !important; } }
 
-/* ─── LOCK SCREEN ───────────────────────────────────────── */
+/* LOCK SCREEN */
 .lock-bg {
   min-height: 100vh;
   display: flex;
@@ -112,7 +109,7 @@ input { font-size: 16px !important; }
 
 .error-msg.visible { opacity: 1; }
 
-/* ─── DASHBOARD ─────────────────────────────────────────── */
+/* DASHBOARD */
 .dash-bg {
   min-height: 100vh;
   padding: 1.25rem;
@@ -155,7 +152,7 @@ input { font-size: 16px !important; }
   font-size: 0.78rem;
 }
 
-/* ─── CARD ──────────────────────────────────────────────── */
+/* CARD */
 .card {
   max-width: 480px;
   width: 100%;
@@ -198,7 +195,7 @@ input { font-size: 16px !important; }
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-/* ─── BUTTONS ───────────────────────────────────────────── */
+/* BUTTONS */
 .btn {
   width: 100%;
   padding: 0.85rem;
@@ -238,7 +235,7 @@ input { font-size: 16px !important; }
   background: linear-gradient(135deg, #10b981, #14b8a6);
 }
 
-/* ─── SPINNER ───────────────────────────────────────────── */
+/* SPINNER */
 .spinner {
   width: 18px;
   height: 18px;
@@ -250,7 +247,7 @@ input { font-size: 16px !important; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── TOAST ─────────────────────────────────────────────── */
+/* TOAST */
 .toast {
   position: fixed;
   top: 1rem;
@@ -281,46 +278,7 @@ input { font-size: 16px !important; }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* ─── INFO CARD ─────────────────────────────────────────── */
-.info-card {
-  max-width: 480px;
-  width: 100%;
-  margin: 1.25rem auto 0;
-  padding: 1rem;
-  background: rgba(30, 41, 59, 0.3);
-  border: 1px solid rgba(71, 85, 105, 0.2);
-  border-radius: 0.75rem;
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-}
-
-.info-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 0.5rem;
-  background: rgba(99, 102, 241, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #818cf8;
-  flex-shrink: 0;
-}
-
-.info-title {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  margin-bottom: 0.2rem;
-}
-
-.info-text {
-  font-size: 0.75rem;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-/* ─── FOOTER ────────────────────────────────────────────── */
+/* FOOTER */
 .dash-footer {
   max-width: 480px;
   width: 100%;
@@ -331,7 +289,7 @@ input { font-size: 16px !important; }
   color: #475569;
 }
 
-/* ─── ANIMATIONS ────────────────────────────────────────── */
+/* ANIMATIONS */
 .shake {
   animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
@@ -342,7 +300,7 @@ input { font-size: 16px !important; }
   20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
-/* ─── SCROLLBAR ─────────────────────────────────────────── */
+/* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
